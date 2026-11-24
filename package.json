@@ -1,0 +1,182 @@
+{
+  "name": "git-diff-quick",
+  "displayName": "Git Diff Qucik",
+  "description": "在 VS Code 查看 Git 文件与行历史，比较分支和提交。",
+  "version": "0.1.0",
+  "publisher": "jokeran",
+  "author": {
+    "name": "JokerAn"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "diff",
+    "history",
+    "compare"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    }
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "check": "tsc -p . --noEmit",
+    "test": "npm run build && node --test test/*.test.cjs",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --no-dependencies --allow-missing-repository --skip-license"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "1.90.0",
+    "@vscode/vsce": "^3.9.0",
+    "typescript": "~5.9.3"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitDiff.fileHistory",
+        "title": "文件历史",
+        "category": "Git Diff"
+      },
+      {
+        "command": "gitDiff.lineHistory",
+        "title": "行历史",
+        "category": "Git Diff"
+      },
+      {
+        "command": "gitDiff.compareBranches",
+        "title": "比较分支",
+        "category": "Git Diff",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "gitDiff.compareCommits",
+        "title": "比较提交",
+        "category": "Git Diff",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "gitDiff.openAllChanges",
+        "title": "打开全部变更",
+        "category": "Git Diff",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "gitDiff.copyCommitId",
+        "title": "复制提交 ID",
+        "category": "Git Diff",
+        "icon": "$(copy)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitDiff",
+          "title": "Git Diff",
+          "icon": "media/git-diff.svg"
+        }
+      ]
+    },
+    "views": {
+      "gitDiff": [
+        {
+          "id": "gitDiff.history",
+          "name": "历史"
+        },
+        {
+          "id": "gitDiff.comparison",
+          "name": "比较"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "gitDiff.history",
+        "contents": "打开 Git 仓库中的文件。行历史支持光标所在行和连续选区。\n[文件历史](command:gitDiff.fileHistory)\n[行历史](command:gitDiff.lineHistory)"
+      },
+      {
+        "view": "gitDiff.comparison",
+        "contents": "[比较分支](command:gitDiff.compareBranches)\n[比较提交](command:gitDiff.compareCommits)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "gitDiff.openAllChanges",
+          "when": "gitDiff.hasChanges"
+        },
+        {
+          "command": "gitDiff.copyCommitId",
+          "when": "false"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "gitDiff.fileHistory",
+          "when": "!explorerResourceIsFolder && (resourceScheme == file || resourceScheme == vscode-remote)",
+          "group": "7_modification@90"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "gitDiff.fileHistory",
+          "when": "!inDiffEditor && (resourceScheme == file || resourceScheme == vscode-remote)",
+          "group": "gitDiff@1"
+        },
+        {
+          "command": "gitDiff.lineHistory",
+          "when": "!inDiffEditor && (resourceScheme == file || resourceScheme == vscode-remote)",
+          "group": "gitDiff@2"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "gitDiff.fileHistory",
+          "when": "view == gitDiff.history",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitDiff.lineHistory",
+          "when": "view == gitDiff.history",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitDiff.compareBranches",
+          "when": "view == gitDiff.comparison",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitDiff.compareCommits",
+          "when": "view == gitDiff.comparison",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitDiff.openAllChanges",
+          "when": "view == gitDiff.comparison && gitDiff.hasChanges",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gitDiff.copyCommitId",
+          "when": "view == gitDiff.history && viewItem == gitDiff.commit",
+          "group": "inline"
+        }
+      ]
+    }
+  }
+}
