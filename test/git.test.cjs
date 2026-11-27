@@ -109,3 +109,32 @@ test('tip-to-tip comparison keeps direction, handles remote refs and reads fixed
   assert.equal(await repo.snapshot(base, 'diverged.txt'), 'main-only\n');
   assert.match(await repo.snapshot(target, 'binary.dat'), /3 字节\nSHA-256 [a-f0-9]{64}/);
 });
+
+test('refresh resolves the selected branch refs while preserving independent and fixed comparisons', async context => {
+  const { repo, git, write, commit } = createRepo(context);
+  write('base.txt', 'base\n');
+  const initial = commit('initial');
+  git('branch', 'origin/topic');
+  git('update-ref', 'refs/remotes/origin/topic', initial);
+  const main = { label: 'main', id: initial, ref: 'refs/heads/main' };
+  const local = { label: 'origin/topic', id: initial, ref: 'refs/heads/origin/topic' };
+  const remote = { label: 'origin/topic', id: initial, ref: 'refs/remotes/origin/topic' };
+  const fixed = { label: initial.slice(0, 8), id: initial };
+  assert.deepEqual((await repo.compareRevisions(main, remote)).changes, []);
+
+  write('new.txt', 'committed change\n');
+  const updated = commit('branch update');
+  git('update-ref', remote.ref, updated);
+  git('update-ref', main.ref, initial);
+  write('working.txt', 'uncommitted change\n');
+
+  const refreshed = await repo.compareRevisions(main, remote);
+  assert.equal(refreshed.target.id, updated);
+  assert.deepEqual(refreshed.changes.map(change => change.after), ['new.txt']);
+  assert.deepEqual((await repo.compareRevisions(main, local)).changes, []);
+  assert.deepEqual((await repo.compareRevisions(fixed, fixed)).changes, []);
+
+  git('update-ref', '-d', remote.ref);
+  await assert.rejects(repo.compareRevisions(main, remote), /refs\/remotes\/origin\/topic/);
+  assert.equal(await repo.snapshot(refreshed.target.id, 'new.txt'), 'committed change\n');
+});

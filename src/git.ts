@@ -31,6 +31,12 @@ export interface Branch {
   current: boolean;
 }
 
+export interface Revision {
+  label: string;
+  id: string;
+  ref?: string;
+}
+
 export interface LineRange {
   start: number;
   end: number;
@@ -231,9 +237,26 @@ export class GitRepository {
     return commits;
   }
 
-  async compare(base: string, target: string): Promise<Change[]> {
-    const output = await this.text(['diff', ...changeFlags, '--name-status', '-z', base, target, '--']);
+  async compare(base: string, target: string, signal?: AbortSignal): Promise<Change[]> {
+    const output = await this.text(['diff', ...changeFlags, '--name-status', '-z', base, target, '--'], signal);
     return readChanges(output.split('\0'), 0).changes;
+  }
+
+  async compareRevisions(base: Revision, target: Revision, signal?: AbortSignal) {
+    const resolve = async (revision: Revision) => {
+      if (!revision.ref) {
+        return revision.id;
+      }
+      const id = await this.resolveCommit(revision.ref, signal);
+      if (!id) {
+        throw new Error(`找不到分支 ${revision.ref}。`);
+      }
+      return id;
+    };
+    const baseTip = resolve(base);
+    const [baseId, targetId] = await Promise.all([baseTip, base.ref && base.ref === target.ref ? baseTip : resolve(target)]);
+    const changes = await this.compare(baseId, targetId, signal);
+    return { base: { ...base, id: baseId }, target: { ...target, id: targetId }, changes };
   }
 
   async historyPath(head: string, path: string, signal?: AbortSignal): Promise<string> {

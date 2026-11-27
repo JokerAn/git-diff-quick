@@ -1,11 +1,6 @@
 import * as vscode from 'vscode';
-import { Change, Commit, GitRepository } from './git';
+import { Change, Commit, GitRepository, Revision } from './git';
 import { fileUri, snapshotUri } from './workspace';
-
-export interface Revision {
-  label: string;
-  id: string;
-}
 
 export interface Comparison {
   repo: GitRepository;
@@ -32,6 +27,7 @@ export async function chooseBranches(repo: GitRepository): Promise<[Revision, Re
   const items = branches.map(branch => ({
     label: branch.name,
     id: branch.id,
+    ref: `${branch.remote ? 'refs/remotes' : 'refs/heads'}/${branch.name}`,
     description: [branch.current ? '当前分支' : branch.remote ? '远程分支' : '本地分支', shortId(branch.id)].join(' · '),
   }));
   const base = await vscode.window.showQuickPick(items, { title: '比较分支（1/2）', placeHolder: '选择左侧基准分支' });
@@ -111,14 +107,14 @@ export async function chooseCommits(repo: GitRepository): Promise<[Revision, Rev
   return target ? [base, target] : undefined;
 }
 
-export async function openAllChanges(comparison: Comparison): Promise<void> {
+export async function openAllChanges(comparison: Comparison, title: string): Promise<void> {
   const { repo, base, target, changes } = comparison;
   const resources = changes.map(change => [
     fileUri(repo, (change.after ?? change.before)!),
     change.before ? snapshotUri(repo, change.before, base.id) : undefined,
     change.after ? snapshotUri(repo, change.after, target.id) : undefined,
   ]);
-  await vscode.commands.executeCommand('vscode.changes', comparisonTitle(comparison), resources);
+  await vscode.commands.executeCommand('vscode.changes', title, resources);
 }
 
 export async function openFileDiff(repo: GitRepository, change: Change, left: Partial<Revision>, right: Partial<Revision>, line?: number) {

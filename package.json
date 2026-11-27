@@ -76,6 +76,18 @@
         "icon": "$(diff)"
       },
       {
+        "command": "gitDiff.refreshComparison",
+        "title": "刷新本次比较",
+        "category": "Git Diff",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitDiff.closeComparison",
+        "title": "关闭本次比较",
+        "category": "Git Diff",
+        "icon": "$(close)"
+      },
+      {
         "command": "gitDiff.copyCommitId",
         "title": "复制提交 ID",
         "category": "Git Diff",
@@ -117,7 +129,15 @@
       "commandPalette": [
         {
           "command": "gitDiff.openAllChanges",
-          "when": "gitDiff.hasChanges"
+          "when": "gitDiff.hasComparison"
+        },
+        {
+          "command": "gitDiff.refreshComparison",
+          "when": "gitDiff.activeBranchComparison"
+        },
+        {
+          "command": "gitDiff.closeComparison",
+          "when": "false"
         },
         {
           "command": "gitDiff.copyCommitId",
@@ -143,6 +163,13 @@
           "group": "gitDiff@2"
         }
       ],
+      "editor/title": [
+        {
+          "command": "gitDiff.refreshComparison",
+          "when": "gitDiff.activeBranchComparison",
+          "group": "navigation"
+        }
+      ],
       "view/title": [
         {
           "command": "gitDiff.fileHistory",
@@ -166,7 +193,7 @@
         },
         {
           "command": "gitDiff.openAllChanges",
-          "when": "view == gitDiff.comparison && gitDiff.hasChanges",
+          "when": "view == gitDiff.comparison && gitDiff.hasComparison",
           "group": "navigation@3"
         }
       ],
@@ -175,6 +202,16 @@
           "command": "gitDiff.copyCommitId",
           "when": "view == gitDiff.history && viewItem == gitDiff.commit",
           "group": "inline"
+        },
+        {
+          "command": "gitDiff.refreshComparison",
+          "when": "view == gitDiff.comparison && viewItem == gitDiff.branchComparison",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitDiff.closeComparison",
+          "when": "view == gitDiff.comparison && (viewItem == gitDiff.branchComparison || viewItem == gitDiff.commitComparison)",
+          "group": "inline@2"
         }
       ]
     }

@@ -1,9 +1,10 @@
 import { basename } from 'node:path';
 import * as vscode from 'vscode';
-import { chooseBranches, chooseCommits, Comparison, comparisonTitle, openAllChanges, openFileDiff, shortId } from './comparison';
+import { chooseBranches, chooseCommits, Comparison, openFileDiff, shortId } from './comparison';
+import { ComparisonView } from './comparisonView';
 import { Change, GitRepository, HistoryEntry } from './git';
 import { HistoryController } from './history';
-import { ComparisonItem, HistoryItem, ResultTree } from './views';
+import { HistoryItem } from './views';
 import { snapshotContent, snapshotScheme, workspaceRepositories } from './workspace';
 
 async function chooseRepository(): Promise<GitRepository | undefined> {
@@ -23,14 +24,12 @@ async function chooseRepository(): Promise<GitRepository | undefined> {
 
 export function activate(context: vscode.ExtensionContext) {
   const history = new HistoryController();
-  const comparison = new ResultTree();
-  const comparisonView = vscode.window.createTreeView('gitDiff.comparison', { treeDataProvider: comparison });
-  context.subscriptions.push(history, comparison, comparisonView,
+  const comparison = new ComparisonView();
+  context.subscriptions.push(history, comparison,
     vscode.workspace.registerTextDocumentContentProvider(snapshotScheme, { provideTextDocumentContent: snapshotContent }),
   );
 
   let comparisonRequest = 0;
-  let lastComparison: Comparison | undefined;
 
   const register = <Args extends unknown[]>(id: string, run: (...args: Args) => void | Thenable<void>) => {
     context.subscriptions.push(vscode.commands.registerCommand(`gitDiff.${id}`, async (...args: Args) => {
@@ -52,23 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (!pair || request !== comparisonRequest) {
       return;
     }
-    const [base, target] = pair;
-    const changes = await vscode.window.withProgress({ location: { viewId: 'gitDiff.comparison' }, title: '比较 Git 变更' }, () =>
-      repo.compare(base.id, target.id),
-    );
-    if (request !== comparisonRequest) {
-      return;
-    }
-    const result = { repo, base, target, changes };
-    lastComparison = result;
-    comparisonView.description = `${comparisonTitle(result)} · ${changes.length} 个文件`;
-    comparisonView.message = changes.length ? undefined : '两个版本的文件内容相同。';
-    comparison.update(changes.map(change => new ComparisonItem(result, change)));
-    await vscode.commands.executeCommand('setContext', 'gitDiff.hasChanges', changes.length > 0);
-    await vscode.commands.executeCommand('gitDiff.comparison.focus');
-    if (changes.length && request === comparisonRequest) {
-      await openAllChanges(result);
-    }
+    await comparison.compare(repo, ...pair);
   };
 
   register('fileHistory', (context?: unknown) => history.browse('file', context));
@@ -85,9 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
   register('compareBranches', () => compare(chooseBranches));
   register('compareCommits', () => compare(chooseCommits));
   register('openComparedFile', (result: Comparison, change: Change) => openFileDiff(result.repo, change, result.base, result.target));
-  register('openAllChanges', async () => {
-    if (lastComparison?.changes.length) {
-      await openAllChanges(lastComparison);
-    }
-  });
+  register('openAllChanges', (item?: unknown) => comparison.openSelected(item));
+  register('refreshComparison', (item?: unknown) => comparison.refresh(item));
+  register('closeComparison', (item?: unknown) => comparison.close(item));
 }
